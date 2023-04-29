@@ -248,45 +248,11 @@ setTimeout(()=>loadPage(firstPage),1)
 
 export abstract class GraphDataBase  {
     abstract GetValues(): {x:number,y:number}[];
-    abstract Add(val: {x: number, y: number} | {x: number, y: number}[]): void;
+    abstract AddData(val: {x: number, y: number} | {x: number, y: number}[]): void;
     label?: string
 }
 
-export class GraphDataAverage extends GraphDataBase {
-    constructor(label: string) {
-        super();
-        this.label = label
-    }
-
-    GetValues(): { x: number; y: number; }[] {
-        let values: {x:number,y:number}[] = []
-        for(let [x,{total,count}] of Object.entries(this.values)) {
-            values.push({x:parseInt(x),y:total/count})
-        }
-        return values;
-    }
-
-    values: {[x: number]: {total: number, count: number}} = {}
-    label?: string;
-    Add(val: {x: number, y: number} | {x: number, y: number}[]) {
-        if(!Array.isArray(val)) {
-            val = [val]
-        }
-
-        val.forEach(x=>{
-            if(!this.values[x.x]) {
-                this.values[x.x] = {total:0,count:1}
-            }
-            else
-            {
-                this.values[x.x].total+=x.y;
-                this.values[x.x].count++;
-            }
-        })
-    }
-}
-
-export class GraphData extends GraphDataBase {
+export class GraphPlot extends GraphDataBase {
     values: {x:number,y:number}[] = []
     label?: string
 
@@ -294,23 +260,27 @@ export class GraphData extends GraphDataBase {
         return this.values;
     }
 
-    AddSplit(xvalues: number|number[], yvalues: number|number[]) {
-        if(!Array.isArray(xvalues)) {
-            xvalues = [xvalues]
+    AddData(xValues: number[], yValues: number[]): void;
+    AddData(values: {x:number, y:number}[]): void;
+    AddData(values: {x: number, y: number}[] | number[], values2?: number[]) {
+      if(values2)
+      {
+        if(values.length != values2.length)
+        {
+          throw new Error(`inconsistent lengths of x/y values: ${values.length}/${values2.length}`)
         }
-        if(!Array.isArray(yvalues)) {
-            yvalues = [yvalues]
+        for(let i = 0; i < values.length; ++i)
+        {
+          this.values.push({x:values[i] as number,y:values2[i]});
         }
-        for(let i=0;i<xvalues.length; ++i) {
-            this.values.push({x:xvalues[i],y:yvalues[i]})
-        }
-    }
-
-    Add(values: {x: number, y: number}[] | {x: number, y: number}) {
+      }
+      else
+      {
         if(!Array.isArray(values)) {
             values = [values];
         }
-        this.values = this.values.concat(values);
+        this.values = this.values.concat(values as {x:number,y:number}[]);
+      }
     }
 }
 
@@ -325,26 +295,9 @@ export class Graph {
         return this.data.find(x=>x.label === label) as T
     }
 
-    AddAverage(label: string) {
-        let data = new GraphDataAverage(label)
-        this.data.push(data);
-        return data;
-    }
-
-    AddData(label: string, values?: {x: number, y: number}[] | {x: number, y: number}) {
-        let data = new GraphData();
+    AddPlot(label: string) {
+        let data = new GraphPlot();
         data.label = label;
-        if(values) {
-            data.Add(values)
-        }
-        this.data.push(data);
-        return data;
-    }
-
-    AddDataSplit(label: string, xvalues: number|number[], yvalues: number|number[]) {
-        let data = new GraphData();
-        data.label = label;
-        data.AddSplit(xvalues,yvalues);
         this.data.push(data);
         return data;
     }
